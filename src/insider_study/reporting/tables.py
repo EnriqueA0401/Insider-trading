@@ -296,9 +296,14 @@ def render(mode: str, results_dir: Path = Path("results")) -> Path:
 
     # Figures
     if {"CFO", "ALL"} <= set(net.columns):
-        iwm = None
+        panel = pd.read_parquet(
+            Path("data/processed") / mode / "panel.parquet", columns=["rebal", "ticker", "ret_nodl"]
+        )
+        iwm = panel.loc[panel["ticker"].eq("IWM")].set_index("rebal")["ret_nodl"]
+        iwm.index = pd.DatetimeIndex(iwm.index).to_period("M").to_timestamp("M")
+        net = net.assign(IWM=iwm.reindex(net.index))
         cols = ["CFO", "ALL", "CFO_MIDLARGE"]
-        bench = "ALL_LARGE" if iwm is None else "IWM"
+        bench = "IWM"
         lo, hi = ("2006-07-31", "2019-12-31") if mode == "dev" else ("2020-01-31", "2025-12-31")
         figures.cumulative(
             net.loc[lo:hi],

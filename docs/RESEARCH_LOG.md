@@ -92,3 +92,38 @@ Familia confirmatoria de 8 contrastes (Holm), presupuesto de 200 trials.
   caché y se reescribió la descarga contra el endpoint público `v8/chart`, ticker a
   ticker, distinguiendo 404 (no existe) de 429 (reintentar). La reconstrucción del
   precio sin ajustar está verificada (split 7:1 de AAPL en 2014).
+
+## 2026-10-21 — F5–F7: Resultados de desarrollo (train + validation)
+
+- Cobertura de precios: solo el 43% de los eventos 2006–2019 tiene serie en Yahoo, y
+  **todas** las series llegan a 2026. La muestra con precio es 100% supervivientes
+  (Enmienda 3b).
+- Corrección post-hoc del estadístico del event study: CAR aritmético → BHAR
+  factorial (Enmienda 3a/c).
+- Veredictos en validation (α FF5+UMD neto anual, p de Holm):
+
+| Hipótesis | α neto | p Holm | Veredicto |
+|---|---|---|---|
+| H1 | −0,9% | 1,00 | RECHAZADA |
+| H2a | −1,0% | 1,00 | RECHAZADA |
+| H2b (vs CEO) | +1,3% | 1,00 | RECHAZADA |
+| H2b (vs director) | −2,1% | 1,00 | RECHAZADA |
+| H3 | +0,2% | 1,00 | RECHAZADA |
+| H4 | +0,2% | 1,00 | RECHAZADA |
+| H5 | +0,8% | 1,00 | RECHAZADA |
+| H6 | −4,1% | 1,00 | RECHAZADA |
+
+- DSR (CFO) = 0,056 con N = 187; PBO = 0,43. ML: IC fuera de muestra negativo en
+  los dos modelos → descartado.
+
+## 2026-10-21 — F8: Holdout
+
+- **Mirada 1** (config `25963eaa`): H1 = −3,7% (t −1,01). Reveló un fallo de datos
+  (ticks erróneos de Yahoo en OTC de céntimos; −108% en un mes en "todos los
+  insiders"). Resultados conservados en `results/final_v1_data_bug/`.
+- **Enmienda 4** (post-holdout): filtro de invertibilidad y límites al coste,
+  aplicados a todas las particiones. Dev se re-ejecutó y los trials se acumulan
+  (N: 95 → 187).
+- **Mirada 2** (config `dfb89f0b`): H1 = −3,4% (t −1,01). Ningún contraste
+  confirmatorio sobrevive a Holm (el mínimo, CFO − CEO, tiene p Holm = 0,30).
+- **Veredicto final: no hay edge explotable** (ver `docs/REPORT.md`).
