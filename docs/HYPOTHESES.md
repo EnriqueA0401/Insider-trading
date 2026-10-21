@@ -226,4 +226,44 @@ Si el alpha desaparece al añadir factores → "es size/value disfrazado".
 
 ## Enmiendas
 
-_(ninguna)_
+### Enmienda 1 — 2026-10-21 — PRE-RESULTADOS (disponibilidad de datos)
+Los *Insider Transactions Data Sets* de la SEC empiezan en **2006Q1** (2003–2005
+devuelven 404). Raspar los XML de 2004–2005 (~600k filings) no es viable.
+- Train pasa a **2006-01-01 → 2014-12-31**. Validation y holdout no cambian.
+- La clasificación CMP necesita 3 años de historial: solo es posible desde **2009**.
+  H3 en train usa 2009–2014.
+
+### Enmienda 2 — 2026-10-21 — PRE-RESULTADOS (aclaraciones operativas)
+Escrita tras ver la cobertura de los datos y antes de calcular ningún retorno.
+a) **Limpieza adicional:** solo acciones comunes (se excluyen preferentes, warrants,
+   units, notas…); se eliminan duplicados multi-filer (misma compra —emisor, fecha,
+   acciones, precio— reportada por varias entidades relacionadas; se conserva la
+   línea del officer/director).
+b) **Entrada en cartera:** con rebalanceo mensual, la entrada efectiva es la
+   apertura de la primera sesión del mes siguiente al filing (siempre posterior al
+   filing). La entrada "t+1 open" se usa en el event study, y el coste de esperar
+   se cuantifica con las variantes de rezago (t+1 cierre, t+2, t+5) y con la
+   variante "saltar un mes".
+c) **Market cap 2006–2009 y faltantes:** proxy por OLS
+   `log(mcap) ~ log(ADV20 USD) + log(precio)` calibrada con eventos de 2009-07 a
+   2010-12 (train) y validada en 2011–2014 (se reporta el acierto por bucket).
+d) **Book-to-market** solo existe con XBRL (2009+). La regresión de panel principal
+   de H2a controla por tamaño, momentum 12-1, iliquidez de Amihud, log del valor de
+   la compra y retraso de filing, con efectos fijos de mes. B/M entra como robustez
+   en la submuestra 2009+.
+e) **Eventos sin precio (supervivencia):** se mantiene la regla del 15%. Además,
+   análisis de acotamiento: las posiciones sin precio rinden IWM + δ, con
+   δ ∈ {0, −1%, −3%} mensual, y se calcula el δ de breakeven que anula el alpha.
+f) **DSR:** se calcula sobre la serie mensual neutral a factores del candidato
+   (alpha + residuo de FF5+UMD), en validation, con N y la varianza de Sharpe
+   tomados del registro de trials. Se reporta también el DSR sobre el exceso de
+   retorno bruto. **PBO:** CSCV (S = 10) sobre los excesos de retorno netos
+   mensuales de todas las configuraciones registradas, 2006-07 a 2019-12.
+g) H3, H4 y H5 confirmatorias se contrastan sobre **todos los insiders**; el
+   subgrupo CFO se reporta como secundario.
+h) **Ventanas de evaluación** (meses calendario de retorno):
+   - train: 2006-07 a 2014-12 (6 meses de calentamiento); las carteras CMP desde 2009-02;
+   - validation: 2015-01 a 2019-12;
+   - holdout: 2020-01 a 2025-12.
+i) Cada configuración de cartera se registra **una vez** en el registro de trials
+   (con su Sharpe de validation).
