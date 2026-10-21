@@ -12,11 +12,11 @@ from insider_study.reporting import figures
 
 
 def _pct(x: Any, nd: int = 1) -> str:
-    return "—" if x is None or x != x else f"{100 * float(x):.{nd}f}%"
+    return "—" if x is None or pd.isna(x) else f"{100 * float(x):.{nd}f}%"
 
 
 def _num(x: Any, nd: int = 2) -> str:
-    return "—" if x is None or x != x else f"{float(x):.{nd}f}"
+    return "—" if x is None or pd.isna(x) else f"{float(x):.{nd}f}"
 
 
 def _table(header: list[str], rows: list[list[str]]) -> str:
