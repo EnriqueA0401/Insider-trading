@@ -1,0 +1,5 @@
+{
+  "config_hash": "25963eaa1683c4280c1a3ce20ec201a09196d9bb7e7f12bb49b2fd0fdc6d4074",
+  "unsealed_at_utc": "2026-10-21T16:25:19.352459+00:00",
+  "reason": "Single pre-registered holdout evaluation (F8). Dev verdict already fixed: H1 fails in validation (net alpha -1.5%/yr, Holm p=1.0, DSR 0.035). No configuration is selected from the holdout."
+}
