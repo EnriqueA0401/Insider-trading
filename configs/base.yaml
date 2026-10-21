@@ -3,7 +3,7 @@
 seed: 20261021
 
 splits:
-  train_start: 2004-01-01
+  train_start: 2006-01-01
   train_end: 2014-12-31
   validation_start: 2015-01-01
   validation_end: 2019-12-31
@@ -15,9 +15,9 @@ data:
   interim_dir: data/interim
   processed_dir: data/processed
   # SEC fair-access policy: identify yourself. Override via config overlay.
-  sec_user_agent: "insider-study research contact@example.com"
+  sec_user_agent: "Enrique Amado enriqueamadofuentes@gmail.com"
   sec_max_requests_per_second: 8.0
-  first_year: 2003          # one extra year of history for the routine/opportunistic lookback
+  first_year: 2006          # SEC structured Form 345 data starts 2006Q1 (Amendment 1)
   last_year: 2025
   price_source: yfinance
   delisting_return_primary: -0.30

@@ -12,6 +12,13 @@ dependencies = [
     "structlog>=24.4",
     "mlflow-skinny>=2.17,<4",
     "exchange-calendars>=4.5,<5",
+    "requests>=2.32,<3",
+    "pyarrow>=17",
+    "yfinance>=0.2.50",
+    "statsmodels>=0.14.4",
+    "scipy>=1.14",
+    "matplotlib>=3.9",
+    "scikit-learn>=1.5",
 ]
 
 [project.scripts]
@@ -27,6 +34,7 @@ dev = [
     "pre-commit>=4.0",
     "pandas-stubs>=2.2",
     "types-pyyaml>=6.0",
+    "types-requests>=2.33.0.20261006",
 ]
 
 [build-system]
@@ -55,8 +63,21 @@ files = ["src", "tests"]
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["exchange_calendars.*", "mlflow.*"]
+module = ["exchange_calendars.*", "mlflow.*", "yfinance.*", "statsmodels.*", "sklearn.*", "scipy.*", "matplotlib.*"]
 ignore_missing_imports = true
+
+# pandas-stubs overloads produce false positives on idiomatic vectorised code.
+# Core integrity modules (config, temporal, holdout, trials) stay fully strict.
+[[tool.mypy.overrides]]
+module = [
+    "insider_study.data.*",
+    "insider_study.signals.*",
+    "insider_study.backtest.*",
+    "insider_study.evaluation.*",
+    "insider_study.reporting.*",
+    "insider_study.study",
+]
+disable_error_code = ["call-overload", "operator"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

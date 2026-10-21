@@ -56,7 +56,7 @@ class DataConfig(_Frozen):
         description="SEC fair-access policy requires 'Name email' in the User-Agent.",
     )
     sec_max_requests_per_second: float = Field(default=8.0, gt=0, le=10)
-    first_year: int = Field(ge=2003)
+    first_year: int = Field(ge=2006)
     last_year: int
     price_source: Literal["yfinance"]
     delisting_return_primary: float = Field(ge=-1.0, le=0.0)
