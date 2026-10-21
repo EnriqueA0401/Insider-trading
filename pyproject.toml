@@ -94,4 +94,5 @@ filterwarnings = [
 ]
 markers = [
     "network: test requires internet access (deselected in CI by default)",
+    "data: test runs on locally built data artifacts (skipped when absent)",
 ]

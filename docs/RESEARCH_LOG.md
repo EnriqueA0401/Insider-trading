@@ -43,3 +43,52 @@ Familia confirmatoria de 8 contrastes (Holm), presupuesto de 200 trials.
 - CI (GitHub Actions) + pre-commit (ruff, mypy, pytest).
 
 **Siguiente:** F2 — ingesta de los datasets trimestrales Form 3/4/5 de la SEC.
+
+## 2026-10-21 — F2: Datos SEC
+
+- **Hallazgo:** los datasets estructurados de la SEC empiezan en 2006Q1 → Enmienda 1
+  (train 2006–2014; CMP desde 2009). Registrada antes de calcular retornos.
+- Descargados 80 trimestres (2006Q1–2025Q4), hash en `data/manifest_sec.json`.
+- Embudo de filtrado (líneas de transacción P/S, tras resolver amendments):
+
+| Paso | Líneas |
+|---|---|
+| Líneas P/S de entrada | 3.441.089 |
+| 4/A con original localizado (descartados; señal en fecha original) | 52.843 |
+| 4/A huérfanos (se mantienen con su propia fecha) | 16.021 |
+| Duplicados multi-filer (misma compra, entidades relacionadas) | 177.145 |
+| Form 5 / no elegible | 17.528 |
+| Precio o acciones ≤ 0 | 14.121 |
+| Valores no comunes (preferentes, warrants…) | 23.461 |
+| Ticker ausente | 10.739 |
+| Filing > 30 días tras la operación | 40.904 |
+| Planes 10b5-1 (segregados, no borrados) | 18.346 |
+| **Líneas de compra elegibles** | **615.264** |
+| **Eventos (insider × emisor × filing)** | **309.579** |
+| Líneas de venta (dataset aparte, diagnóstico) | 2.461.912 |
+
+- **Auditoría de roles** (300 títulos aleatorios, seed fija,
+  `data/processed/role_audit_sample.csv`, revisión manual por el investigador):
+  - CFO: 100% de precisión y de recall en la muestra (objetivo ≥ 97%).
+  - Un solo error, en CEO ("Chief Exec Officer"), ya corregido y con test.
+- Eventos por rol principal:
+
+| Rol | Eventos |
+|---|---|
+| Director | 139.966 |
+| Otro officer | 53.986 |
+| CEO | 50.961 |
+| Propietario >10% | 40.134 |
+| **CFO** | **18.438** |
+
+## 2026-10-21 — F3: Datos de mercado
+
+- Factores FF5 + UMD (diarios y mensuales) y breakpoints ME de NYSE de la librería
+  de Ken French, hasta 2026-08.
+- Acciones en circulación y book equity desde los XBRL frames de la SEC (2009+).
+- **Incidencia con yfinance:** en lotes, Yahoo devolvía tablas vacías *sin error*
+  cuando limitaba (rate limit). Se habrían marcado como "sin datos" miles de tickers
+  vivos, inflando artificialmente el sesgo de supervivencia. Se descartó toda esa
+  caché y se reescribió la descarga contra el endpoint público `v8/chart`, ticker a
+  ticker, distinguiendo 404 (no existe) de 429 (reintentar). La reconstrucción del
+  precio sin ajustar está verificada (split 7:1 de AAPL en 2014).
