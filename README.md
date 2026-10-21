@@ -22,13 +22,15 @@ Forms 3/4/5, genera alpha **neto de costes** y **residual a factores** (FF5 + mo
 |---|---|---|
 | F0 | Pre-registro de hipótesis | ✅ |
 | F1 | Esqueleto de ingeniería (config, interfaces, guards, CI) | ✅ |
-| F2 | Ingesta y limpieza SEC (Forms 3/4/5) | ⏳ |
-| F3 | Precios, factores, market cap point-in-time | ⏳ |
-| F4 | Tests de fuga temporal sobre datos reales | ⏳ |
-| F5 | Event study (CAR, alpha factorial, efecto CFO marginal) | ⏳ |
-| F6 | Cartera, costes y capacidad | ⏳ |
-| F7 | Validación (walk-forward, CPCV, DSR, PBO, robustez) | ⏳ |
-| F8 | Holdout único y reporte final | ⏳ |
+| F2 | Ingesta y limpieza SEC (Forms 3/4/5) | ✅ |
+| F3 | Precios, factores, market cap point-in-time | ✅ |
+| F4 | Tests de fuga temporal sobre datos reales | ✅ |
+| F5 | Event study (BHAR factorial, efecto CFO marginal) | ✅ |
+| F6 | Cartera, costes y capacidad | ✅ |
+| F7 | Validación (CPCV, DSR, PBO, robustez) | ✅ |
+| F8 | Holdout único y reporte final | ✅ |
+
+**Veredicto y reporte completo: [`docs/REPORT.md`](docs/REPORT.md).**
 
 ## Instalación reproducible
 
@@ -45,6 +47,22 @@ uv run insider-study status configs/base.yaml            # trials usados / holdo
 
 Antes de descargar datos de la SEC, define tu identificación (política de acceso de
 la SEC) en un overlay de configuración: `data.sec_user_agent: "Nombre email"`.
+
+### Reproducir el estudio completo
+
+```bash
+uv run insider-study build-data configs/base.yaml        # SEC 2006-2025 -> data/processed/events.parquet
+# precios (Yahoo v8 chart, ~1 h, ticker a ticker con backoff), frames XBRL y factores:
+uv run python -c "from pathlib import Path; import pandas as pd; \
+  from insider_study.data.prices import YFinancePriceProvider as P; \
+  P(Path('data/raw/yf')).download_chart(pd.read_csv('data/processed/yf_universe.csv', header=None)[0])"
+uv run insider-study run-study configs/base.yaml --mode dev     # train + validation, registra trials
+uv run insider-study unseal-holdout configs/base.yaml --reason "..."   # una sola vez, commitear
+uv run insider-study run-study configs/base.yaml --mode final   # holdout 2020-2025
+```
+
+Los resultados quedan en `results/dev/` y `results/final/` (`results.json`, `tables.md`,
+figuras y series mensuales). Los datos crudos no se versionan; sus hashes sí.
 
 ## Arquitectura
 
@@ -82,6 +100,8 @@ que yfinance puede sustituirse por CRSP/Norgate sin tocar el resto.
 
 ## Limitaciones conocidas (declaradas de antemano)
 
-- **yfinance tiene sesgo de supervivencia** (cobertura pobre de empresas deslistadas).
-  Se cuantifica y se trata con supuestos de retorno de deslistado (−30%, 0%, −100%).
-- Market cap point-in-time 2004–2008 sin fuente estructurada gratuita (riesgo abierto).
+- **Yahoo no contiene ninguna empresa deslistada.** Todas las series con precio
+  llegan a 2026, así que la muestra con precio está condicionada a sobrevivir.
+  Solo ~43% de los eventos tiene precio. Ver `docs/REPORT.md` §Limitaciones.
+- Datos SEC estructurados solo desde 2006; market cap XBRL solo desde 2009 (antes,
+  un proxy por liquidez con un 83% de acierto de bucket fuera de la muestra de calibración).
