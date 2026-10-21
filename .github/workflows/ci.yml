@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.11.32"
+      - name: Install (locked)
+        run: uv sync --locked
+      - name: Lint
+        run: uv run ruff check .
+      - name: Format
+        run: uv run ruff format --check .
+      - name: Type-check
+        run: uv run mypy
+      - name: Tests
+        run: uv run pytest -m "not network" --cov=insider_study --cov-report=term-missing
+      - name: Config hash
+        run: uv run insider-study validate-config configs/base.yaml
