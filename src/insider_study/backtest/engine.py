@@ -28,6 +28,8 @@ class PortfolioSpec:
     delisting_return: float
     cost_multiplier: float = 1.0
     skip_months: int = 0  # robustness: extra delay before a signal is used
+    min_price_usd: float = 0.0
+    min_adv_usd: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -66,6 +68,8 @@ def run_monthly(
 ) -> MonthlyResult:
     hold = holdings_table(events, rebal, spec).merge(panel, on=["rebal", "ticker"], how="inner")
     hold = hold.loc[hold["ret_nodl"].notna()]
+    # Investability screen, measured before the rebalance (no look-ahead).
+    hold = hold.loc[(hold["raw_px"] >= spec.min_price_usd) & (hold["adv20"] >= spec.min_adv_usd)]
     dl = spec.delisting_return
     hold["ret"] = (1 + hold["ret_nodl"]) * np.where(hold["delisted"], 1 + dl, 1.0) - 1
 
@@ -97,7 +101,9 @@ def run_monthly(
             st = stats_by_month.get(r, pd.DataFrame()).reindex(traded.index)
             # Missing stats -> conservative defaults (max spread, 5% daily vol).
             hs_t = st["half_spread"].fillna(hi).clip(lo, hi) if len(st.columns) else hi
-            sig = st["sigma60"].fillna(0.05) if len(st.columns) else 0.05
+            sig = np.minimum(
+                st["sigma60"].fillna(0.05) if len(st.columns) else 0.05, costs.max_sigma_daily
+            )
             px = st["raw_px"].fillna(10.0).clip(lower=0.01) if len(st.columns) else 10.0
             # Participation = notional / ADV; unknown ADV -> assume the cap. Bounded at one
             # full day of volume (larger trades would be worked over several days).
@@ -109,7 +115,9 @@ def run_monthly(
             commission = np.maximum(
                 costs.commission_min_usd, costs.commission_per_share * notional / px
             )
-            c = float((notional * (hs_t + impact) + commission).sum()) * mult / spec.aum_usd
+            # A trade can never cost more than its own notional.
+            per_name = np.minimum((notional * (hs_t + impact) + commission) * mult, notional)
+            c = float(per_name.sum()) / spec.aum_usd
         w_sum = float(target.sum())
         cash = 1.0 - w_sum
         port = float((target * g["ret"]).sum()) if g is not None else 0.0

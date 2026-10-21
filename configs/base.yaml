@@ -49,6 +49,10 @@ portfolio:
   max_position_weight: 0.05
   long_only: true
   universes: [all, mid_large]
+  # Amendment 4 (post-holdout data fix): exclude sub-$1 / no-volume names, where
+  # Yahoo bad ticks (e.g. +47,700% months) are concentrated.
+  min_price_usd: 1.0
+  min_adv_usd: 10000
 
 costs:
   commission_per_share: 0.005
@@ -60,6 +64,7 @@ costs:
   max_adv_participation: 0.10
   adv_window_days: 20
   cost_multipliers: [0.5, 2.0]
+  max_sigma_daily: 0.25
 
 benchmark:
   market_tickers: [IWM]

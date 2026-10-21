@@ -51,3 +51,20 @@ def test_assign_split_uses_boundaries(cfg: StudyConfig) -> None:
     out = assign_split(dates, cfg)
     assert out.isna().iloc[0]
     assert list(out.iloc[1:]) == [Split.TRAIN, Split.VALIDATION, Split.HOLDOUT]
+
+
+def test_second_look_keeps_history(cfg: StudyConfig, tmp_path: Path) -> None:
+    from insider_study.holdout import second_look
+
+    f = tmp_path / "HOLDOUT_UNSEALED"
+    HoldoutGuard.unseal(cfg, reason="first", unseal_file=f)
+    fixed = cfg.model_copy(update={"seed": cfg.seed + 1})
+    second_look(fixed, reason="data bug fix", unseal_file=f)
+    rec = json.loads(f.read_text())
+    assert rec["look_number"] == 2
+    assert rec["history"][0]["config_hash"] == cfg.config_hash()
+    HoldoutGuard.from_config(fixed, f).check_range(date(2020, 1, 1), date(2025, 12, 31))
+    with pytest.raises(HoldoutAccessError):
+        HoldoutGuard.from_config(cfg, f).check_range(date(2020, 1, 1), date(2025, 12, 31))
+    with pytest.raises(HoldoutAccessError, match="already"):
+        second_look(cfg, reason="again", unseal_file=f)

@@ -72,6 +72,30 @@ class HoldoutGuard:
         return unseal_file
 
 
+def second_look(cfg: StudyConfig, reason: str, unseal_file: Path = UNSEAL_FILE) -> Path:
+    """Re-open the holdout for a NEW config hash after it has already been looked at.
+
+    Only for documented fixes (e.g. a data bug found in the first holdout run). The
+    previous unseal records are kept in `history`, so every look at the holdout stays
+    visible in the committed file; reports must show the results of every look.
+    """
+    if not unseal_file.exists():
+        raise HoldoutAccessError("holdout was never unsealed; use unseal()")
+    record = json.loads(unseal_file.read_text())
+    history = [*record.pop("history", []), record]
+    if any(r.get("config_hash") == cfg.config_hash() for r in history):
+        raise HoldoutAccessError("this config hash already had its holdout look")
+    new = {
+        "config_hash": cfg.config_hash(),
+        "unsealed_at_utc": datetime.now(UTC).isoformat(),
+        "reason": reason,
+        "look_number": len(history) + 1,
+        "history": history,
+    }
+    unseal_file.write_text(json.dumps(new, indent=2) + "\n")
+    return unseal_file
+
+
 def assign_split(filing_dates: pd.Series, cfg: StudyConfig) -> pd.Series:
     """Map filing dates to train / validation / holdout (NaN-like None outside)."""
     s = cfg.splits

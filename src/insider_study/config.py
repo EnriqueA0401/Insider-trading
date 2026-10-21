@@ -108,6 +108,9 @@ class PortfolioConfig(_Frozen):
     max_position_weight: float = Field(gt=0, le=1)
     long_only: Literal[True]
     universes: tuple[Literal["all", "mid_large"], ...]
+    # Investability screen at each rebalance (Amendment 4, post-holdout data fix).
+    min_price_usd: float = Field(ge=0)
+    min_adv_usd: float = Field(ge=0)
 
 
 class CostConfig(_Frozen):
@@ -120,6 +123,7 @@ class CostConfig(_Frozen):
     max_adv_participation: float = Field(gt=0, le=1)
     adv_window_days: int = Field(gt=0)
     cost_multipliers: tuple[float, ...]
+    max_sigma_daily: float = Field(gt=0, description="Cap on the vol input of the impact model.")
 
 
 class BenchmarkConfig(_Frozen):

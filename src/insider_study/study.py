@@ -274,6 +274,8 @@ def _spec(ctx: Context, name: str, **kw: Any) -> PortfolioSpec:
         "aum_usd": c.portfolio.aum_usd,
         "max_position_weight": c.portfolio.max_position_weight,
         "delisting_return": c.data.delisting_return_primary,
+        "min_price_usd": c.portfolio.min_price_usd,
+        "min_adv_usd": c.portfolio.min_adv_usd,
     }
     return PortfolioSpec(**(base | kw))
 
@@ -853,7 +855,7 @@ def _json_default(o: object) -> object:
     return str(o)
 
 
-def run(cfg: StudyConfig, mode: Mode) -> Path:
+def run(cfg: StudyConfig, mode: Mode, rerun_reason: str | None = None) -> Path:
     ctx = prepare(cfg, mode)
     registry = (
         TrialRegistry(cfg.tracking.trial_registry_path, cfg.validation.max_trials)
@@ -861,9 +863,16 @@ def run(cfg: StudyConfig, mode: Mode) -> Path:
         else None
     )
     if registry is not None and registry.count() > 0:
-        raise RuntimeError(
-            "trial registry already has records: the dev study is registered once. "
-            "Re-runs must not silently double-count trials."
+        if rerun_reason is None:
+            raise RuntimeError(
+                "trial registry already has records: the dev study is registered once. "
+                "Re-runs must not silently double-count trials (pass a documented reason)."
+            )
+        # Previous trials stay in the registry: N only grows (conservative DSR).
+        registry.append(
+            TrialRecord(
+                cfg.config_hash(), "rerun", Split.VALIDATION, 0.0, 0, f"RERUN: {rerun_reason}"
+            )
         )
     ctx.results["config_hash"] = cfg.config_hash()
     ctx.results["mode"] = mode

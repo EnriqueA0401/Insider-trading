@@ -114,3 +114,19 @@ def test_exit_without_market_data_has_bounded_cost(cfg: StudyConfig) -> None:
     res = run_monthly(ev, panel, rebal, rf, _spec(max_position_weight=1.0), cfg.costs)
     # Exit in February: at most cap spread (5%) + sigma(5%) * sqrt(1) + commission.
     assert res.cost.iloc[1] < 0.11
+
+
+def test_investability_screen_and_cost_cap(cfg: StudyConfig) -> None:
+    """Sub-$1 names are not bought; no trade ever costs more than its notional."""
+    rebal = rebalance_sessions(date(2010, 1, 1), date(2010, 3, 31))
+    penny = _panel(rebal, "P", 100.0, adv=1e9)
+    penny["raw_px"] = 0.5
+    wild = _panel(rebal, "W", 0.0, adv=1e9)
+    wild["sigma60"] = 16.0  # bad-tick volatility
+    ev = pd.DataFrame({"filing_date": [date(2009, 12, 15)] * 2, "yf_ticker": ["P", "W"]})
+    rf = pd.Series(0.0, index=rebal.to_period("M").to_timestamp("M"))
+    spec = _spec(max_position_weight=1.0, min_price_usd=1.0, min_adv_usd=1e4)
+    res = run_monthly(ev, pd.concat([penny, wild]), rebal, rf, spec, cfg.costs)
+    assert res.n_holdings.iloc[0] == 1  # the penny stock is screened out
+    assert res.cost.iloc[0] <= 1.0
+    assert res.cost.iloc[0] < 0.2  # sigma input capped at 25%/day

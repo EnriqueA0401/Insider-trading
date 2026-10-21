@@ -32,6 +32,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     p_run = sub.add_parser("run-study", help="run the study (dev = pre-holdout, final = holdout)")
     p_run.add_argument("path", type=Path)
     p_run.add_argument("--mode", choices=["dev", "final"], required=True)
+    p_run.add_argument("--rerun-reason", help="documented reason to re-run dev (trials accumulate)")
     p_run.add_argument(
         "--event-study-only",
         action="store_true",
@@ -41,6 +42,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     p_unseal = sub.add_parser("unseal-holdout", help="one-time holdout unseal for this config")
     p_unseal.add_argument("path", type=Path)
     p_unseal.add_argument("--reason", required=True)
+    p_unseal.add_argument(
+        "--second-look", action="store_true", help="re-open for a new config after a documented fix"
+    )
 
     args = parser.parse_args(argv)
 
@@ -79,11 +83,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.event_study_only:
             print(rerun_event_analyses(cfg))
         else:
-            print(run(cfg, args.mode))
+            print(run(cfg, args.mode, args.rerun_reason))
         print(render(args.mode))
     elif args.command == "unseal-holdout":
         cfg = load_config(args.path)
-        print(HoldoutGuard.unseal(cfg, args.reason))
+        if args.second_look:
+            from insider_study.holdout import second_look
+
+            print(second_look(cfg, args.reason))
+        else:
+            print(HoldoutGuard.unseal(cfg, args.reason))
     return 0
 
 

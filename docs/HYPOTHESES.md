@@ -291,3 +291,28 @@ c) Al calcular el BHAR factorial aparecieron eventos con betas pre-evento
    absurdos. Se descartan las betas con |β| > 5 (sin AR factorial para ese
    evento) y todos los retornos por evento se winsorizan al 1%/99% dentro de cada
    partición antes de promediar. Las carteras no se ven afectadas.
+
+### Enmienda 4 — 2026-10-21 — POST-HOLDOUT (corrección de un fallo de datos)
+**Esta enmienda se escribió después de haber mirado una vez el holdout.**
+En el primer holdout (config `25963eaa…`), la cartera "todos los insiders" perdió
+un 108% en junio de 2025, algo imposible en una cartera long-only. La causa son
+datos erróneos de Yahoo en acciones OTC de céntimos: meses de +10.000% a +47.000%
+y volatilidad diaria del 1.600%. Una posición de peso ~0,07% se multiplicaba ×100
+por un tick falso, y el modelo de impacto cobraba al venderla más que su propio
+nocional.
+
+Corrección, aplicada por igual a train, validation y holdout:
+- Filtro de invertibilidad en cada rebalanceo, medido antes de operar: precio sin
+  ajustar ≥ USD 1 y ADV20 ≥ USD 10.000.
+- La volatilidad que entra en el modelo de impacto se limita al 25% diario.
+- El coste de una operación nunca supera su nocional.
+
+Nuevo config hash `dfb89f0b…`.
+- Los resultados previos se conservan: dev en `results/dev_v1_pre_screen/` y
+  holdout en `results/final_v1_data_bug/`, y se reportan junto a los nuevos.
+- El registro de trials conserva las 95 evaluaciones anteriores y suma las nuevas:
+  N solo crece, así que el DSR es más conservador.
+- El holdout se re-abre con `second_look`; el fichero `HOLDOUT_UNSEALED` mantiene
+  el historial de las dos miradas.
+- El veredicto de dev ya estaba fijado antes de la primera mirada: H1 falla en
+  validation.
