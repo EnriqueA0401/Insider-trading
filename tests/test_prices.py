@@ -8,7 +8,15 @@ from insider_study.data.prices import derive, to_yahoo
 
 @pytest.mark.parametrize(
     ("raw", "expected"),
-    [("BRK.B", "BRK-B"), ("acme, acmew", "ACME"), ("$XYZ", "XYZ"), ("ABC/WS", "ABC-WS")],
+    [
+        ("BRK.B", "BRK-B"),
+        ("acme, acmew", "ACME"),
+        ("$XYZ", "XYZ"),
+        ("ABC/WS", "ABC-WS"),
+        ("XYZ.OB", "XYZ"),
+        ("BJ$4PAFJ", ""),
+        ('"""AWRE"""', "AWRE"),
+    ],
 )
 def test_to_yahoo(raw: str, expected: str) -> None:
     assert to_yahoo(raw) == expected
@@ -34,3 +42,44 @@ def test_derive_undoes_split_adjustment_and_applies_dividends() -> None:
     assert list(d["raw_close"]) == [100.0, 100.0, 50.0, 50.0]
     assert d["adj_open"].iloc[0] == pytest.approx(49.0)
     assert d["dollar_volume"].iloc[0] == 5000.0
+
+
+def test_parse_chart_payload() -> None:
+    from insider_study.data.prices import parse_chart
+
+    ts = [1401974400 + 13.5 * 3600, 1402320600]  # 2014-06-05 and 2014-06-09 (NY session)
+    payload = {
+        "chart": {
+            "result": [
+                {
+                    "meta": {"exchangeTimezoneName": "America/New_York"},
+                    "timestamp": [int(t) for t in ts],
+                    "events": {
+                        "splits": {"x": {"date": 1402320600, "numerator": 7.0, "denominator": 1.0}}
+                    },
+                    "indicators": {
+                        "quote": [
+                            {
+                                "open": [1, 2],
+                                "high": [1, 2],
+                                "low": [1, 2],
+                                "close": [1.0, 2.0],
+                                "volume": [10, 20],
+                            }
+                        ],
+                        "adjclose": [{"adjclose": [0.9, 1.9]}],
+                    },
+                }
+            ]
+        }
+    }
+    f = parse_chart(payload)
+    assert [d.strftime("%Y-%m-%d") for d in f.index] == ["2014-06-05", "2014-06-09"]
+    assert f["splits"].tolist() == [0.0, 7.0]
+    assert f["adj_close"].tolist() == [0.9, 1.9]
+
+
+def test_parse_chart_empty() -> None:
+    from insider_study.data.prices import parse_chart
+
+    assert parse_chart({"chart": {"result": None}}).empty

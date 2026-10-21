@@ -562,7 +562,8 @@ def run_multiple_testing(ctx: Context, registry: TrialRegistry) -> None:
     h = ctx.cfg.signal.primary_horizon_months
     rf = ctx.factors_m["rf"]
     n_trials = registry.count()
-    sharpes = np.array(registry.sharpes(Split.VALIDATION))
+    # ML records carry no return series (n_periods = 0): count them in N, not in var(SR).
+    sharpes = np.array([r.sharpe for r in registry.records(Split.VALIDATION) if r.n_periods > 0])
     var_sr = float(np.var(sharpes, ddof=1)) if len(sharpes) > 1 else 0.0
     out: dict[str, Any] = {"n_trials": n_trials, "var_sr_monthly": var_sr}
     for key in ("CFO", "ALL", "CFO_MIDLARGE"):

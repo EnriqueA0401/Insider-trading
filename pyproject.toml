@@ -54,7 +54,8 @@ select = ["E", "F", "W", "I", "B", "UP", "N", "SIM", "RUF", "PL", "PT", "DTZ"]
 ignore = ["PLR0913", "PLR2004", "PLR0912", "PLR0915", "PLR0917", "N806"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["PLR2004", "S101", "E501"]
+"tests/*" = ["PLR2004", "S101", "E501", "PLC0415"]
+"src/insider_study/cli.py" = ["PLC0415"]  # lazy imports keep the CLI fast
 "src/insider_study/reporting/*" = ["E501", "RUF001"]
 "src/insider_study/study.py" = ["E501"]
 
