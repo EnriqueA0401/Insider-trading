@@ -1,5 +1,13 @@
 {
-  "config_hash": "25963eaa1683c4280c1a3ce20ec201a09196d9bb7e7f12bb49b2fd0fdc6d4074",
-  "unsealed_at_utc": "2026-10-21T16:25:19.352459+00:00",
-  "reason": "Single pre-registered holdout evaluation (F8). Dev verdict already fixed: H1 fails in validation (net alpha -1.5%/yr, Holm p=1.0, DSR 0.035). No configuration is selected from the holdout."
+  "config_hash": "dfb89f0b84896865dfee028374a7eaf6fb54c8f07e0a8fb987471c0a19bf07ee",
+  "unsealed_at_utc": "2026-10-21T16:56:29.243552+00:00",
+  "reason": "Second look after Amendment 4 (Yahoo bad-tick data bug found in look 1). Same pre-registered portfolios; dev verdict unchanged (H1 fails, Holm p=1.0). Look-1 results kept in results/final_v1_data_bug.",
+  "look_number": 2,
+  "history": [
+    {
+      "config_hash": "25963eaa1683c4280c1a3ce20ec201a09196d9bb7e7f12bb49b2fd0fdc6d4074",
+      "unsealed_at_utc": "2026-10-21T16:25:19.352459+00:00",
+      "reason": "Single pre-registered holdout evaluation (F8). Dev verdict already fixed: H1 fails in validation (net alpha -1.5%/yr, Holm p=1.0, DSR 0.035). No configuration is selected from the holdout."
+    }
+  ]
 }
