@@ -11,7 +11,7 @@ __pycache__/
 htmlcov/
 
 # Data (versioned by manifest hash, never committed)
-data/
+/data/
 mlruns/
 mlartifacts/
 
