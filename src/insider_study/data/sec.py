@@ -200,12 +200,14 @@ def parse_quarter(zip_path: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
                 *_FN_COLS,
             ],
         )
-        footnotes = _read_tsv(zf, "FOOTNOTES.tsv", ["ACCESSION_NUMBER", "FOOTNOTE_ID", "FOOTNOTE_TXT"])
+        footnotes = _read_tsv(
+            zf, "FOOTNOTES.tsv", ["ACCESSION_NUMBER", "FOOTNOTE_ID", "FOOTNOTE_TXT"]
+        )
 
-    trans = trans.merge(sub[["ACCESSION_NUMBER", "DOCUMENT_TYPE"]], on="ACCESSION_NUMBER", how="left")
-    counts = (
-        trans.groupby(["DOCUMENT_TYPE", "TRANS_CODE"]).size().rename("n_lines").reset_index()
+    trans = trans.merge(
+        sub[["ACCESSION_NUMBER", "DOCUMENT_TYPE"]], on="ACCESSION_NUMBER", how="left"
     )
+    counts = trans.groupby(["DOCUMENT_TYPE", "TRANS_CODE"]).size().rename("n_lines").reset_index()
     counts["quarter"] = zip_path.name.split("_")[0]
 
     om = trans.loc[trans["TRANS_CODE"].isin(OPEN_MARKET_CODES)].copy()

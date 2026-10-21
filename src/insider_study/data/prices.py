@@ -62,13 +62,22 @@ def parse_chart(payload: dict[str, Any]) -> pd.DataFrame:
         return pd.DataFrame()
     r = result[0]
     tz = r.get("meta", {}).get("exchangeTimezoneName") or "America/New_York"
-    idx = pd.to_datetime(r["timestamp"], unit="s", utc=True).tz_convert(tz).tz_localize(None).normalize()
+    idx = (
+        pd.to_datetime(r["timestamp"], unit="s", utc=True)
+        .tz_convert(tz)
+        .tz_localize(None)
+        .normalize()
+    )
     q = r["indicators"]["quote"][0]
     adj = (r["indicators"].get("adjclose") or [{}])[0].get("adjclose", q["close"])
     frame = pd.DataFrame(
         {
-            "open": q["open"], "high": q["high"], "low": q["low"], "close": q["close"],
-            "adj_close": adj, "volume": q["volume"],
+            "open": q["open"],
+            "high": q["high"],
+            "low": q["low"],
+            "close": q["close"],
+            "adj_close": adj,
+            "volume": q["volume"],
         },
         index=idx,
         dtype=float,
@@ -156,8 +165,14 @@ class YFinancePriceProvider:
                     if not sub.empty:
                         frame = sub.reindex(columns=list(_YF_FIELDS))
                         frame.columns = [
-                            "open", "high", "low", "close", "adj_close", "volume",
-                            "dividends", "splits",
+                            "open",
+                            "high",
+                            "low",
+                            "close",
+                            "adj_close",
+                            "volume",
+                            "dividends",
+                            "splits",
                         ]
                         frame.index = pd.to_datetime(frame.index).tz_localize(None)
                         frame.index.name = "date"
@@ -208,7 +223,14 @@ class YFinancePriceProvider:
             backoff = 60.0
             frame = hist.dropna(subset=["Close"]).reindex(columns=list(_YF_FIELDS))
             frame.columns = [
-                "open", "high", "low", "close", "adj_close", "volume", "dividends", "splits",
+                "open",
+                "high",
+                "low",
+                "close",
+                "adj_close",
+                "volume",
+                "dividends",
+                "splits",
             ]
             frame.index = pd.to_datetime(frame.index).tz_localize(None).normalize()
             frame.index.name = "date"
@@ -286,6 +308,8 @@ class YFinancePriceProvider:
             frame = self.load(t)
             if frame is None:
                 continue
-            frame = frame.loc[(frame.index >= pd.Timestamp(start)) & (frame.index <= pd.Timestamp(end))]
+            frame = frame.loc[
+                (frame.index >= pd.Timestamp(start)) & (frame.index <= pd.Timestamp(end))
+            ]
             parts.append(frame.assign(ticker=t).reset_index())
         return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame()

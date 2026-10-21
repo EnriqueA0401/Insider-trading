@@ -67,7 +67,9 @@ def validate_events(
             pos = sessions.searchsorted(last_trade.loc[idx], side="right") - 1
             ok_pos = pos >= 0
             ref_dates = sessions[np.clip(pos, 0, len(sessions) - 1)]
-            fresh = ok_pos & ((last_trade.loc[idx].to_numpy() - ref_dates.to_numpy()) <= np.timedelta64(5, "D"))
+            fresh = ok_pos & (
+                (last_trade.loc[idx].to_numpy() - ref_dates.to_numpy()) <= np.timedelta64(5, "D")
+            )
             ref = closes.reindex(ref_dates).to_numpy()
             dev = vwap.loc[idx].to_numpy() / ref - 1.0
             trades_at_entry = entry.loc[idx].isin(sessions).to_numpy()

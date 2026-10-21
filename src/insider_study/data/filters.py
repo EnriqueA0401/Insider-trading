@@ -35,14 +35,19 @@ def resolve_amendments(lines: pd.DataFrame) -> tuple[pd.DataFrame, int, int]:
     their own (later) filing date, which is conservative.
     """
     is_amend = lines[Col.FORM_TYPE].eq("4/A")
-    originals = lines.loc[lines[Col.FORM_TYPE].eq("4"), [Col.ISSUER_CIK, Col.INSIDER_CIK, Col.FILING_DATE]]
+    originals = lines.loc[
+        lines[Col.FORM_TYPE].eq("4"), [Col.ISSUER_CIK, Col.INSIDER_CIK, Col.FILING_DATE]
+    ]
     keys = set(originals.itertuples(index=False, name=None))
     amend = lines.loc[is_amend]
     matched = pd.Series(
         [
             (i, o, d) in keys
             for i, o, d in zip(
-                amend[Col.ISSUER_CIK], amend[Col.INSIDER_CIK], amend["date_of_orig_sub"], strict=True
+                amend[Col.ISSUER_CIK],
+                amend[Col.INSIDER_CIK],
+                amend["date_of_orig_sub"],
+                strict=True,
             )
         ],
         index=amend.index,
@@ -83,7 +88,9 @@ class SECTransactionFilter:
         df, n_dup = drop_cross_filed_duplicates(df)
         counts["cross_filed_duplicate"] = n_dup
 
-        lag = (pd.to_datetime(df[Col.FILING_DATE]) - pd.to_datetime(df[Col.TRANSACTION_DATE])).dt.days
+        lag = (
+            pd.to_datetime(df[Col.FILING_DATE]) - pd.to_datetime(df[Col.TRANSACTION_DATE])
+        ).dt.days
         df = df.assign(filing_lag_days=lag)
 
         sales = df.loc[df[Col.TRANS_CODE].eq("S") & df[Col.ACQ_DISP].eq("D")]
@@ -99,7 +106,9 @@ class SECTransactionFilter:
             ("missing_ticker", df[Col.TICKER].fillna("").isin(_BAD_TICKERS)),
         ]
         if self.cfg.max_filing_lag_days is not None:
-            rules.append(("filing_lag_too_long", df["filing_lag_days"].gt(self.cfg.max_filing_lag_days)))
+            rules.append(
+                ("filing_lag_too_long", df["filing_lag_days"].gt(self.cfg.max_filing_lag_days))
+            )
 
         excluded = pd.Series(False, index=df.index)
         for name, mask in rules:
@@ -108,7 +117,9 @@ class SECTransactionFilter:
             excluded |= new
         kept = df.loc[~excluded]
 
-        plan_mask = kept[Col.IS_10B5_1] if self.cfg.exclude_10b5_1 else pd.Series(False, index=kept.index)
+        plan_mask = (
+            kept[Col.IS_10B5_1] if self.cfg.exclude_10b5_1 else pd.Series(False, index=kept.index)
+        )
         counts["plan_10b5_1_segregated"] = int(plan_mask.sum())
         return FilterResult(
             eligible=kept.loc[~plan_mask].copy(),

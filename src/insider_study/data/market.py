@@ -66,7 +66,9 @@ def monthly_panel_for_ticker(
     pos_next = rebal.searchsorted(r, side="right")
     has_next = pos_next < len(rebal)
     nxt = pd.DatetimeIndex(
-        np.where(has_next, rebal[pos_next.clip(max=len(rebal) - 1)], data_end + pd.Timedelta(days=1))
+        np.where(
+            has_next, rebal[pos_next.clip(max=len(rebal) - 1)], data_end + pd.Timedelta(days=1)
+        )
     )
     observable = has_next & (nxt <= data_end)
     next_traded = observable & nxt.isin(sessions)
@@ -148,13 +150,17 @@ def event_market_features(
             sh = shares_by.get(cik)
             mcap = np.nan
             if sh is not None:
-                known = sh.loc[(sh["known_at"] <= fd) & (sh["known_at"] > fd - np.timedelta64(400, "D"))]
+                known = sh.loc[
+                    (sh["known_at"] <= fd) & (sh["known_at"] > fd - np.timedelta64(400, "D"))
+                ]
                 if len(known):
                     mcap = float(known["value"].iloc[-1]) * raw_close / 1e6
             beq = np.nan
             eq = equity_by.get(cik)
             if eq is not None:
-                known = eq.loc[(eq["known_at"] <= fd) & (eq["known_at"] > fd - np.timedelta64(500, "D"))]
+                known = eq.loc[
+                    (eq["known_at"] <= fd) & (eq["known_at"] > fd - np.timedelta64(500, "D"))
+                ]
                 if len(known):
                     beq = float(known["value"].iloc[-1]) / 1e6
             rows.append(
