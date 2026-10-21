@@ -32,6 +32,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     p_run = sub.add_parser("run-study", help="run the study (dev = pre-holdout, final = holdout)")
     p_run.add_argument("path", type=Path)
     p_run.add_argument("--mode", choices=["dev", "final"], required=True)
+    p_run.add_argument(
+        "--event-study-only",
+        action="store_true",
+        help="recompute event analyses on the cached dev run",
+    )
 
     p_unseal = sub.add_parser("unseal-holdout", help="one-time holdout unseal for this config")
     p_unseal.add_argument("path", type=Path)
@@ -67,11 +72,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         stage_events(cfg)
     elif args.command == "run-study":
         from insider_study.reporting.tables import render
-        from insider_study.study import run
+        from insider_study.study import rerun_event_analyses, run
 
         configure_logging()
         cfg = load_config(args.path)
-        print(run(cfg, args.mode))
+        if args.event_study_only:
+            print(rerun_event_analyses(cfg))
+        else:
+            print(run(cfg, args.mode))
         print(render(args.mode))
     elif args.command == "unseal-holdout":
         cfg = load_config(args.path)

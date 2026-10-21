@@ -202,8 +202,17 @@ def render(mode: str, results_dir: Path = Path("results")) -> Path:
         out.append(f"## Event study — {s} (media de medias mensuales, t Newey-West)\n")
         rows = []
         for g, d in es[s].items():
-            row = [g, _num(d.get("car_6", {}).get("n_events"), 0)]
-            for col in ("bhr_6", "mar_1", "mar_3", "mar_6", "mar_12", "car_6", "car_12"):
+            row = [g, _num(d.get("fbhar_6", {}).get("n_events"), 0)]
+            for col in (
+                "bhr_6",
+                "mar_1",
+                "mar_3",
+                "mar_6",
+                "mar_12",
+                "fbhar_6",
+                "fbhar_12",
+                "car_6",
+            ):
                 c = d.get(col, {})
                 row.append(f"{_pct(c.get('mean'), 2)} ({_num(c.get('t'), 1)})")
             rows.append(row)
@@ -217,8 +226,9 @@ def render(mode: str, results_dir: Path = Path("results")) -> Path:
                     "MAR 3m",
                     "MAR 6m",
                     "MAR 12m",
-                    "CAR 6m",
-                    "CAR 12m",
+                    "BHAR-FF 6m",
+                    "BHAR-FF 12m",
+                    "CAR arit. 6m (sesgado)",
                 ],
                 rows,
             )
@@ -239,7 +249,7 @@ def render(mode: str, results_dir: Path = Path("results")) -> Path:
             _table(["Grupo", "t+1 apertura", "t+1 cierre", "t+2 apertura", "t+5 apertura"], rows)
             + "\n"
         )
-    out.append("## Regresión de panel (CAR 6m, EF de mes, cluster emisor×mes)\n")
+    out.append("## Regresión de panel (BHAR-FF 6m, EF de mes, cluster emisor×mes)\n")
     for name, coefs in es["panel_regression"].items():
         rows = [
             [k, _num(v["coef"] * 100, 2) + " pp", _num(v["t"]), _num(v["p_two_sided"], 3)]
@@ -300,7 +310,7 @@ def render(mode: str, results_dir: Path = Path("results")) -> Path:
     figures.capacity(res["capacity"], "Alpha neto vs. capital gestionado", figs / "capacity.png")
     figures.decay(
         {g: d["yearly_car6"] for g, d in es["decay"].items()},
-        "CAR 6m medio por año de filing",
+        "BHAR-FF 6m medio por año de filing",
         figs / "decay.png",
     )
     path = base / "tables.md"

@@ -6,6 +6,8 @@ Horizon h months = 21*h sessions; exit at the adjusted close of the last session
 - mar: bhr minus IWM buy-and-hold over the same dates
 - car: sum of daily abnormal returns vs FF5+UMD, betas from sessions [-252, -22]
   relative to entry (min 120 observations), i.e. estimated before the filing.
+  Reported for reference only: it is biased upwards for volatile stocks.
+- fbhar: factor buy-and-hold abnormal return (compounded), the primary statistic.
 Lag variants (entry 2 or 5 sessions later, or at the first close) measure how fast
 the signal decays — the filing-lag sensitivity.
 """
@@ -20,6 +22,7 @@ from insider_study.data.prices import YFinancePriceProvider
 from insider_study.evaluation.stats import FACTORS
 
 HORIZON_SESSIONS = {1: 21, 3: 63, 6: 126, 12: 252}
+MAX_ABS_BETA = 5.0
 LAG_VARIANTS = {
     "open_t1": (0, "open"),
     "close_t1": (0, "close"),
@@ -82,6 +85,8 @@ def event_returns(
                 if ok.sum() >= 120:
                     Xc = np.c_[np.ones(ok.sum()), X[ok]]
                     beta = np.linalg.lstsq(Xc, y[ok], rcond=None)[0][1:]
+                    if not np.all(np.abs(beta) <= MAX_ABS_BETA):
+                        beta = None  # degenerate fit (stale/penny prices): no factor AR
             day1 = ac[e] / ao[e] - 1.0
             for h, n in HORIZON_SESSIONS.items():
                 complete = e + n - 1 < len(dates)
@@ -99,6 +104,16 @@ def event_returns(
                     ar = r_win - rf[e : last + 1] - fmat[e : last + 1] @ beta
                     car = float(np.nansum(ar))
                     row[f"car_{h}"] = car + (np.log1p(delisting_return) if delisted else 0.0)
+                    # Factor BHAR: compounded stock return minus compounded expected
+                    # return. Unlike the arithmetic CAR it has no volatility drag bias
+                    # (sum of daily returns overstates the holding return of volatile
+                    # small caps; Barber & Lyon 1997).
+                    expected = rf[e : last + 1] + fmat[e : last + 1] @ beta
+                    ok_d = np.isfinite(r_win) & np.isfinite(expected)
+                    realised = float(np.prod(1 + r_win[ok_d]))
+                    if delisted:
+                        realised *= 1 + delisting_return
+                    row[f"fbhar_{h}"] = realised - float(np.prod(1 + expected[ok_d]))
                 row[f"delisted_{h}"] = int(delisted)
             # Lag sensitivity at the primary 6-month horizon (market-adjusted).
             n6 = HORIZON_SESSIONS[6]

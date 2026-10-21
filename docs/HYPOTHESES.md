@@ -267,3 +267,27 @@ h) **Ventanas de evaluación** (meses calendario de retorno):
    - holdout: 2020-01 a 2025-12.
 i) Cada configuración de cartera se registra **una vez** en el registro de trials
    (con su Sharpe de validation).
+
+### Enmienda 3 — 2026-10-21 — POST-HOC (tras ver los resultados de train/validation)
+Marcada como POST-HOC. No cambia ninguna hipótesis, cartera ni umbral; corrige un
+estadístico y documenta un hallazgo de datos.
+a) **CAR → BHAR factorial.** El CAR del event study suma retornos diarios
+   aritméticos y está sesgado al alza en acciones volátiles (arrastre de
+   volatilidad; Barber & Lyon 1997). En los resultados, el CAR 6m de "todos los
+   insiders" (~10%) triplicaba el retorno buy-and-hold ajustado por mercado (~3,5%).
+   Se sustituye como estadístico principal del event study, de la regresión de panel
+   y del objetivo ML por el **BHAR factorial**: retorno compuesto de la acción menos
+   el retorno esperado compuesto (FF5 + UMD, mismas betas pre-evento). El CAR se
+   sigue mostrando como referencia, etiquetado como sesgado. Las carteras (base de
+   H1–H6) no usan CAR y no cambian. El chequeo ML se repite con el nuevo objetivo y
+   sus dos modelos se suman otra vez al conteo de trials.
+b) **Supervivencia total en Yahoo.** Las 5.739 series con precio llegan todas a
+   2026: Yahoo no contiene ninguna empresa deslistada. La muestra con precio está
+   condicionada a sobrevivir hasta hoy. Los supuestos de retorno de deslistado
+   (−30%, 0%, −100%) nunca se activan, así que esas sensibilidades no informan
+   nada. El sesgo es estructural y se trata en el veredicto (§9, regla del 15%).
+c) Al calcular el BHAR factorial aparecieron eventos con betas pre-evento
+   degeneradas (precios planos o penny stocks), que componían retornos esperados
+   absurdos. Se descartan las betas con |β| > 5 (sin AR factorial para ese
+   evento) y todos los retornos por evento se winsorizan al 1%/99% dentro de cada
+   partición antes de promediar. Las carteras no se ven afectadas.

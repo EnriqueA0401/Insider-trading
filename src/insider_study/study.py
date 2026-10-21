@@ -678,6 +678,13 @@ def run_event_study(ctx: Context) -> pd.DataFrame:
         )
         er.to_parquet(path)
     df = ev.join(er, how="inner")
+    # Event-level returns are winsorised at 1/99% within each split (Amendment 3c).
+    ret_cols = [c for c in er.columns if c.split("_")[0] in ("bhr", "mar", "fbhar", "car", "mar6")]
+    for sp_name, idx in df.groupby(df["split"].astype(str)).groups.items():
+        del sp_name
+        for c in ret_cols:
+            lo_q, hi_q = df.loc[idx, c].quantile([0.01, 0.99])
+            df.loc[idx, c] = df.loc[idx, c].clip(lo_q, hi_q)
     df["filing_month"] = pd.to_datetime(df["filing_date"]).dt.to_period("M").astype(str)
     df["split"] = df["split"].astype(str)
     splits = ["train", "validation"] if ctx.mode == "dev" else ["holdout"]
@@ -690,7 +697,7 @@ def run_event_study(ctx: Context) -> pd.DataFrame:
             gd = d.loc[m]
             grp[g] = {
                 f"{kind}_{hz}": _monthly_mean_t(gd, f"{kind}_{hz}", hz + 1)
-                for kind in ("bhr", "mar", "car")
+                for kind in ("bhr", "mar", "fbhar", "car")
                 for hz in ctx.cfg.signal.horizons_months
                 if f"{kind}_{hz}" in gd
             }
@@ -713,11 +720,11 @@ def run_event_study(ctx: Context) -> pd.DataFrame:
     panels: dict[str, Any] = {}
     for sp in splits:
         d = df.loc[df["split"].eq(sp)]
-        panels[sp] = panel_regression(d, "car_6", regs, ctrls).to_dict(orient="index")
+        panels[sp] = panel_regression(d, "fbhar_6", regs, ctrls).to_dict(orient="index")
         d09 = d.loc[pd.to_datetime(d["filing_date"]) >= "2009-07-01"]
         if len(d09) > 1000:
             panels[f"{sp}_with_bm"] = panel_regression(
-                d09, "car_6", regs, [*ctrls, "log_bm"]
+                d09, "fbhar_6", regs, [*ctrls, "log_bm"]
             ).to_dict(orient="index")
     out["panel_regression"] = panels
 
@@ -726,7 +733,7 @@ def run_event_study(ctx: Context) -> pd.DataFrame:
     decay = {}
     for g in ("ALL", "CFO"):
         m = SELECTORS[g](df).fillna(False).astype(bool)
-        yearly = df.loc[m].groupby("year")["car_6"].mean()
+        yearly = df.loc[m].groupby("year")["fbhar_6"].mean()
         x = sm.add_constant(yearly.index.to_numpy(dtype=float))
         fit = sm.OLS(yearly.to_numpy(), x).fit()
         decay[g] = {
@@ -764,9 +771,9 @@ def run_ml_check(ctx: Context, df: pd.DataFrame) -> None:
     d["is_opp"] = d["pattern"].eq("OPPORTUNISTIC").astype(float)
     d["is_rout"] = d["pattern"].eq("ROUTINE").astype(float)
     d["is_ten_pct_only"] = d["is_ten_pct_only"].astype(float)
-    d = d.replace([np.inf, -np.inf], np.nan).dropna(subset=[*ML_FEATURES, "car_6"])
+    d = d.replace([np.inf, -np.inf], np.nan).dropna(subset=[*ML_FEATURES, "fbhar_6"])
     d = d.sort_values("filing_date")
-    y = d["car_6"].clip(*d["car_6"].quantile([0.01, 0.99]))
+    y = d["fbhar_6"].clip(*d["fbhar_6"].quantile([0.01, 0.99]))
     x = d[ML_FEATURES].astype(float)
     dates = pd.to_datetime(d["filing_date"])
     k, k_test = ctx.cfg.validation.cpcv_groups, ctx.cfg.validation.cpcv_test_groups
@@ -880,3 +887,37 @@ def run(cfg: StudyConfig, mode: Mode) -> Path:
             )
         run_multiple_testing(ctx, registry)
     return _dump(ctx)
+
+
+def rerun_event_analyses(cfg: StudyConfig) -> Path:
+    """Recompute event study, ML check and DSR/PBO on the cached dev run.
+
+    Used after the post-hoc switch from arithmetic CAR to factor BHAR (Amendment 3).
+    Portfolio configurations are unchanged and are NOT re-registered; the corrected
+    ML check adds its two models to the trial count again (conservative).
+    """
+    ctx = prepare(cfg, "dev")
+    ctx.results = json.loads((ctx.out_dir / "results.json").read_text())
+    (cfg.data.processed_dir / "dev" / "event_returns.parquet").unlink(missing_ok=True)
+    net = pd.read_parquet(ctx.out_dir / "monthly_net_returns.parquet")
+    empty = pd.Series(dtype=float)
+    for k in net.columns:
+        ctx.series[k] = MonthlyResult(net[k], net[k], empty, empty, empty, empty)
+    registry = TrialRegistry(cfg.tracking.trial_registry_path, cfg.validation.max_trials)
+    df = run_event_study(ctx)
+    run_ml_check(ctx, df)
+    for model in ("linear", "gbm"):
+        registry.append(
+            TrialRecord(
+                cfg.config_hash(),
+                "ml",
+                Split.VALIDATION,
+                0.0,
+                0,
+                f"ML CPCV check (target fbhar_6, Amendment 3): {model}",
+            )
+        )
+    run_multiple_testing(ctx, registry)
+    path = ctx.out_dir / "results.json"
+    path.write_text(json.dumps(ctx.results, indent=2, default=_json_default))
+    return path

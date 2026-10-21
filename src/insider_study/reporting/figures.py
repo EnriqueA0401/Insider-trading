@@ -142,7 +142,7 @@ def decay(yearly: dict[str, dict[str, float]], title: str, path: Path) -> Path:
         )
     ax.axhline(0, color=INK_2, linewidth=0.8)
     ax.legend(frameon=False, fontsize=8, labelcolor=INK_2)
-    _style(ax, title, "CAR medio a 6 meses (%)")
+    _style(ax, title, "BHAR factorial medio a 6 meses (%)")
     fig.tight_layout()
     fig.savefig(path, facecolor=SURFACE)
     plt.close(fig)
