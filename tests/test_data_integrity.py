@@ -30,8 +30,10 @@ def test_every_event_enters_strictly_after_filing(events: pd.DataFrame) -> None:
 def test_no_event_is_dated_by_transaction_date(events: pd.DataFrame) -> None:
     """Entry is a function of the filing date only; a late filing must enter late."""
     late = events.loc[events["filing_lag_days"] >= 5]
-    assert (pd.to_datetime(late["entry_date"]) > pd.to_datetime(late["first_trade_date"])
-            + pd.Timedelta(days=4)).all()
+    assert (
+        pd.to_datetime(late["entry_date"])
+        > pd.to_datetime(late["first_trade_date"]) + pd.Timedelta(days=4)
+    ).all()
 
 
 def test_filing_lag_cap_respected(events: pd.DataFrame) -> None:
@@ -49,7 +51,9 @@ def test_portfolio_holdings_only_use_past_filings(events: pd.DataFrame) -> None:
     h = holdings_table(sample, rebal, spec)
     # Join back: every held (rebal, ticker) must have an event filed before the rebalance.
     first_filing = sample.groupby("yf_ticker")["filing_date"].min()
-    assert (pd.to_datetime(first_filing.reindex(h["ticker"]).to_numpy()) < h["rebal"].to_numpy()).all()
+    assert (
+        pd.to_datetime(first_filing.reindex(h["ticker"]).to_numpy()) < h["rebal"].to_numpy()
+    ).all()
 
 
 def test_dev_artifacts_never_contain_holdout_events() -> None:

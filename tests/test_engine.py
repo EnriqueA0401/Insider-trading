@@ -103,3 +103,14 @@ def test_monthly_panel_detects_delisting_and_uses_past_liquidity() -> None:
     p = monthly_panel_for_ticker(frame, rebal, pd.Timestamp("2010-06-30"))
     assert bool(p.loc[p["rebal"] == pd.Timestamp("2010-03-01"), "delisted"].iloc[0])
     assert p["adv20"].dropna().max() < 1e7  # the future spike never leaks back
+
+
+def test_exit_without_market_data_has_bounded_cost(cfg: StudyConfig) -> None:
+    """A holding that stops trading must not be charged an absurd impact cost."""
+    rebal = rebalance_sessions(date(2010, 1, 1), date(2010, 3, 31))
+    panel = _panel(rebal[:1], "A", 0.0)  # A has no market data after January
+    ev = pd.DataFrame({"filing_date": [date(2009, 12, 15)], "yf_ticker": ["A"]})
+    rf = pd.Series(0.0, index=rebal.to_period("M").to_timestamp("M"))
+    res = run_monthly(ev, panel, rebal, rf, _spec(max_position_weight=1.0), cfg.costs)
+    # Exit in February: at most cap spread (5%) + sigma(5%) * sqrt(1) + commission.
+    assert res.cost.iloc[1] < 0.11

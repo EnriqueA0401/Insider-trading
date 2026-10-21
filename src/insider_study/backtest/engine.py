@@ -98,9 +98,14 @@ def run_monthly(
             # Missing stats -> conservative defaults (max spread, 5% daily vol).
             hs_t = st["half_spread"].fillna(hi).clip(lo, hi) if len(st.columns) else hi
             sig = st["sigma60"].fillna(0.05) if len(st.columns) else 0.05
-            adv = st["adv20"].fillna(1.0).clip(lower=1.0) if len(st.columns) else 1.0
             px = st["raw_px"].fillna(10.0).clip(lower=0.01) if len(st.columns) else 10.0
-            impact = costs.impact_coefficient * sig * np.sqrt(notional / adv)
+            # Participation = notional / ADV; unknown ADV -> assume the cap. Bounded at one
+            # full day of volume (larger trades would be worked over several days).
+            adv = st["adv20"] if len(st.columns) else pd.Series(np.nan, index=traded.index)
+            part = (
+                (notional / adv.where(adv > 0)).fillna(costs.max_adv_participation).clip(upper=1.0)
+            )
+            impact = costs.impact_coefficient * sig * np.sqrt(part)
             commission = np.maximum(
                 costs.commission_min_usd, costs.commission_per_share * notional / px
             )
